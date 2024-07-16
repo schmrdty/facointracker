@@ -1,0 +1,199 @@
+pip install flask requests
+//
+from flask import Flask, request, jsonify, render_template_string
+import requests
+import time
+import dotenv
+app = Flask(__name__)
+
+# Configuration //needs dotenv setup
+COINGECKO_API = 'https://api.coingecko.com/api/v3'
+FARCASTER_API = 'https://api.neynar.com/v2'
+API_KEY = 'usedotenv'
+SIGNER_UUID = 'usedotenv'
+CLIENT_ID = 'usedotenv'
+
+# HTML templates for the frame pages
+PAGE_1 = '''
+<!DOCTYPE html>
+<html>
+<head>
+    <meta property="og:frame" content="vNext" />
+    <meta property="og:frame:image" content="http://degenduckynft.com/images/page1.png" />
+    <meta property="og:frame:button:1" content="Next" />
+    <meta property="og:frame:button:2" content="Unenroll" />
+    <meta property="og:frame:button:3" content="ELI5" />
+</head>
+<body>
+    <form action="/page2" method="post">
+        <label for="contract_address">Contract Address:</label>
+        <input type="text" id="contract_address" name="contract_address" required><br><br>
+        <input type="submit" value="Next">
+    </form>
+    <form action="/unenroll" method="post">
+        <input type="submit" value="Unenroll">
+    </form>
+    <form action="/eli5" method="post">
+        <input type="submit" value="ELI5">
+    </form>
+</body>
+</html>
+'''
+
+PAGE_2 = '''
+<!DOCTYPE html>
+<html>
+<head>
+    <meta property="og:frame" content="vNext" />
+    <meta property="og:frame:image" content="http://degenduckynft.com/images/page2.png" />
+    <meta property="og:frame:button:1" content="Confirm" />
+    <meta property="og:frame:button:2" content="Back" />
+    <meta property="og:frame:button:3" content="ELI5" />
+</head>
+<body>
+    <form action="/page3" method="post">
+        <label for="percentage">Notify me at % change:</label>
+        <input type="number" id="percentage" name="percentage" value="20"><br><br>
+        <input type="submit" value="Confirm">
+    </form>
+    <form action="/page1" method="post">
+        <input type="submit" value="Back">
+    </form>
+    <form action="/eli5" method="post">
+        <input type="submit" value="ELI5">
+    </form>
+</body>
+</html>
+'''
+
+PAGE_3 = '''
+<!DOCTYPE html>
+<html>
+<head>
+    <meta property="og:frame" content="vNext" />
+    <meta property="og:frame:image" content="http://degenduckynft.com/images/page3.png" />
+    <meta property="og:frame:button:1" content="Done" />
+    <meta property="og:frame:button:2" content="Back" />
+    <meta property="og:frame:button:3" content="ELI5" />
+    <meta property="og:frame:button:4" content="Whoops" />
+</head>
+<body>
+    <p>Contract Address: {{ contract_address }}</p>
+    <p>Notify at % change: {{ percentage }}</p>
+    <form action="/done" method="post">
+        <input type="submit" value="Done">
+    </form>
+    <form action="/page2" method="post">
+        <input type="submit" value="Back">
+    </form>
+    <form action="/eli5" method="post">
+        <input type="submit" value="ELI5">
+    </form>
+    <form action="/unenroll" method="post">
+        <input type="submit" value="Whoops">
+    </form>
+</body>
+</html>
+'''
+
+PAGE_4 = '''
+<!DOCTYPE html>
+<html>
+<head>
+    <meta property="og:frame" content="vNext" />
+    <meta property="og:frame:image" content="http://degenduckynft.com/images/page4.png" />
+</head>
+<body>
+    <p>Explain Like I'm 5 (ELI5) Content</p>
+</body>
+</html>
+'''
+
+PAGE_5 = '''
+<!DOCTYPE html>
+<html>
+<head>
+    <meta property="og:frame" content="vNext" />
+    <meta property="og:frame:image" content="http://degenduckynft.com/images/page5.png" />
+</head>
+<body>
+    <p>You have been unenrolled from notifications.</p>
+</body>
+</html>
+'''
+
+@app.route('/page1', methods=['GET', 'POST'])
+def page1():
+    return render_template_string(PAGE_1)
+
+@app.route('/page2', methods=['POST'])
+def page2():
+    contract_address = request.form.get('contract_address')
+    return render_template_string(PAGE_2, contract_address=contract_address)
+
+@app.route('/page3', methods=['POST'])
+def page3():
+    contract_address = request.form.get('contract_address')
+    percentage = request.form.get('percentage', 20)
+    return render_template_string(PAGE_3, contract_address=contract_address, percentage=percentage)
+
+@app.route('/eli5', methods=['POST'])
+def eli5():
+    return render_template_string(PAGE_4)
+
+@app.route('/unenroll', methods=['POST'])
+def unenroll():
+    # Send final direct cast to confirm unenrollment
+    # Implementation for sending a direct cast
+    return render_template_string(PAGE_5)
+
+@app.route('/done', methods=['POST'])
+def done():
+    # Send direct cast with confirmation
+    # Implementation for sending a direct cast
+    return jsonify({"status": "Notification setup complete"})
+
+@app.route('/check_price', methods=['POST'])
+def check_price():
+    contract_address = request.form.get('contract_address')
+    percentage = float(request.form.get('percentage', 20))
+    user_fid = request.form.get('fid')
+
+    # Fetch token price from CoinGecko
+    response = requests.get(f'{COINGECKO_API}/simple/token_price/ethereum?contract_addresses={contract_address}&vs_currencies=usd')
+    if response.status_code == 200:
+        data = response.json()
+        current_price = data[contract_address.lower()]['usd']
+
+        # Check for significant price change and send notification if needed
+        # (Placeholder logic for checking price change and sending notifications)
+        send_direct_cast(user_fid, contract_address, current_price, percentage)
+
+    return jsonify({"status": "Price checked"})
+
+def send_direct_cast(fid, contract_address, current_price, percentage):
+    # Implement the function to send a direct cast via Neynar API
+    pass
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
+#logic for the direct cast
+def send_direct_cast(fid, contract_address, current_price, percentage):
+    url = f'{FARCASTER_API}/cast'
+    headers = {
+        'Authorization': f'Bearer {API_KEY}',
+        'Content-Type': 'application/json'
+    }
+    payload = {
+        'signer_uuid': SIGNER_UUID,
+        'text': f'Token {contract_address} has changed by {percentage}% and is now {current_price} USD.',
+        'embeds': [{'url': f'http://degenduckynft.com/images/notification.png'}],
+        'parent': None,
+        'channel_id': 'warpcast'
+    }
+    response = requests.post(url, headers=headers, json=payload)
+    return response.status_code
+
+# run gunicorn
+pip install gunicorn
+gunicorn -w 4 app:app -b 0.0.0.0:5000
