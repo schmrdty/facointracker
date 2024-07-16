@@ -1,0 +1,50 @@
+#this is an alternative to the original code
+#build directory and ownership
+#setup virtual enviornment
+/var/www/farcaster-frame
+sudo mkdir -p /var/www/farcaster-frame
+sudo chown -R $USER:$USER /var/www/farcaster-frame
+#setup virtual environment
+pip install flask requests python-dotenv gunicorn
+#create service file for reliability
+[Unit]
+Description=Farcaster Frame Service
+After=network.target
+
+[Service]
+User=your-username
+Group=www-data
+WorkingDirectory=/var/www/farcaster-frame
+ExecStart=/var/www/farcaster-frame/venv/bin/gunicorn -w 4 app:app -b 0.0.0.0:5000
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+#reload
+sudo systemctl daemon-reload
+sudo systemctl enable farcaster-frame
+sudo systemctl start farcaster-frame
+#update/grade
+sudo apt update && upgrade
+
+#install and establish nginx or alternative
+sudo apt install nginx
+sudo nano /etc/nginx/sites-available/farcaster-frame
+
+#add or create file
+server {
+    listen 80;
+    server_name your_domain_or_ip;
+
+    location / {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+#enable ngninx
+sudo ln -s /etc/nginx/sites-available/farcaster-frame /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl restart nginx
